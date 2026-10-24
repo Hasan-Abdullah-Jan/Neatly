@@ -18,6 +18,7 @@ Last updated: 2026-10-25
 - `npm run lint` — 0 errors, warnings only (see Known issues).
 - `npm run test:e2e` — both Playwright specs were discovered and skipped themselves (2 skipped) because Supabase environment variables and `E2E_EMAIL`/`E2E_PASSWORD` were absent. This is **not** a passing end-to-end run, and neither spec has been executed against a live database.
 - No live Supabase project or `.env.local` was available, so migrations 011/012, RLS policies, SECURITY DEFINER RPCs, Storage policies, and database-backed flows were not executed against Postgres.
+- The initial Level 1–4 work is committed as `a91a184`.
 
 ---
 
@@ -398,7 +399,7 @@ Statuses are `reported` (Open), `acknowledged` (Assigned), `in_progress`, `resol
 20. **No issue notifications.** There is no email, push, or in-app notification when an issue is assigned, resolved, verified, or reopened.
 21. **Pattern refresh is not scheduled.** `issue_patterns` updates through the issue-change trigger or when the issues workspace loads. A long-idle space does not refresh the rolling window on its own.
 22. **Conversion due dates are not selectable.** The conversion RPC accepts a due date, but the current UI always sends null, so the task uses the issue due date or a one-day default.
-23. **No git history.** The repository has no commits yet; all changes are uncommitted.
+23. **Only one git commit exists.** The initial Levels 1–4 work is committed as `a91a184`; there is no incremental history yet.
 
 ---
 
@@ -410,6 +411,6 @@ Level 4 is implemented in the working tree and locally verified, but not live-ve
 - Verify issue RLS, the lifecycle RPCs, Storage upload/signed URLs, and the one-off conversion path against Postgres.
 - Run both Playwright flows with a real owner/admin/supervisor account and a test space.
 - Add SQL/API permission tests that prove cross-space isolation and role restrictions.
-- Commit the Level 1–4 work.
+- Keep subsequent changes in small commits; the initial Levels 1–4 work is committed.
 
 Level 5 scope is not defined in this repository yet. It should build on the Level 3 task engine and Level 4 issue record without changing their core semantics.
