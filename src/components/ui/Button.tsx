@@ -11,12 +11,12 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const variantStyles = {
-  primary: 'bg-primary-600 text-white hover:bg-primary-700 active:bg-primary-800 focus:ring-primary-500',
+  primary: 'bg-primary-active text-white hover:bg-primary-text active:bg-primary-text focus:ring-primary-active',
   secondary: 'bg-neutral-100 text-neutral-900 hover:bg-neutral-200 active:bg-neutral-300 focus:ring-neutral-400 dark:bg-neutral-800 dark:text-neutral-100 dark:hover:bg-neutral-700 dark:active:bg-neutral-600',
   outline: 'border-2 border-neutral-300 bg-transparent hover:bg-neutral-100 active:bg-neutral-200 focus:ring-neutral-400 dark:border-neutral-600 dark:hover:bg-neutral-800 dark:active:bg-neutral-700',
   ghost: 'bg-transparent hover:bg-neutral-100 active:bg-neutral-200 focus:ring-neutral-400 dark:hover:bg-neutral-800 dark:active:bg-neutral-700',
-  destructive: 'bg-destructive-600 text-white hover:bg-destructive-700 active:bg-destructive-800 focus:ring-destructive-500',
-  success: 'bg-success-600 text-white hover:bg-success-700 active:bg-success-800 focus:ring-success-500',
+  destructive: 'bg-destructive-text text-white hover:bg-destructive-text active:bg-destructive-text focus:ring-destructive-text',
+  success: 'bg-success-text text-white hover:bg-success-text active:bg-success-text focus:ring-success-text',
 }
 
 const sizeStyles = {

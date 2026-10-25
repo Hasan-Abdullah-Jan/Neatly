@@ -15,6 +15,15 @@ import { AreaPage } from '@features/areas/pages/AreaPage'
 import { IssuesPage } from '@features/issues/pages/IssuesPage'
 import { IssueDetailPage } from '@features/issues/pages/IssueDetailPage'
 import { SpaceSettingsPage } from '@features/spaces/pages/SpaceSettingsPage'
+import { SuppliesPage } from '@features/supplies/pages/SuppliesPage'
+import { TeamsPage } from '@features/spaces/components/TeamsPage'
+import { InvitationsPage } from '@features/spaces/components/InvitationsPage'
+import { AwayPeriodsPage } from '@features/spaces/components/AwayPeriodsPage'
+import { WorkloadPage } from '@features/spaces/pages/WorkloadPage'
+import { InvitationAcceptancePage } from '@features/spaces/pages/InvitationAcceptancePage'
+import { PrivacyPage } from '@features/privacy/pages/PrivacyPage'
+import { NotificationsPage } from '@features/notifications/pages/NotificationsPage'
+import { RecommendationsPage } from '@features/recommendations/pages/RecommendationsPage'
 import { useAuth } from '@contexts/AuthContext'
 
 function RequireSpace({ children }: { children: ReactNode }) {
@@ -42,6 +51,15 @@ function AppRoutes() {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+      <Route path="/privacy" element={<PrivacyPage />} />
+      <Route
+        path="/invite/:token"
+        element={
+          <ProtectedRoute>
+            <InvitationAcceptancePage />
+          </ProtectedRoute>
+        }
+      />
 
       {/* Onboarding has its own full-screen layout. */}
       <Route
@@ -73,8 +91,15 @@ function AppRoutes() {
         <Route path="/areas/:areaId" element={<AreaPage />} />
         <Route path="/issues" element={<IssuesPage />} />
         <Route path="/issues/:issueId" element={<IssueDetailPage />} />
+        <Route path="/supplies" element={<SuppliesPage />} />
+        <Route path="/teams" element={<TeamsPage />} />
+        <Route path="/invitations" element={<InvitationsPage />} />
+        <Route path="/away" element={<AwayPeriodsPage />} />
+        <Route path="/workload" element={<WorkloadPage />} />
         <Route path="/space-settings" element={<SpaceSettingsPage />} />
         <Route path="/settings" element={<SettingsPage />} />
+        <Route path="/notifications" element={<NotificationsPage />} />
+        <Route path="/insights" element={<RecommendationsPage />} />
       </Route>
 
       {/* Unknown paths respect whether a space exists yet. */}

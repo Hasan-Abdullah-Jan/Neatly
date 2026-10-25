@@ -29,9 +29,13 @@ function makeTask(id: string, name: string): Task {
     schedule_anchor_at: '2026-10-01T09:00:00.000Z',
     assignee_id: null,
     assignee_role: null,
+    assignee_team_id: null,
+    rotation_enabled: false,
+    rotation_cursor: 0,
     required_skills: [],
     supplies_needed: [],
     instructions: null,
+    evidence_rule: null,
     is_active: true,
     is_one_off: false,
     created_by: 'user-1',
@@ -60,6 +64,15 @@ function makeInstance(
     completed_at: completedAt,
     skipped_at: null,
     skip_reason: null,
+    verification_status: 'not_required',
+    submitted_at: null,
+    verified_by: null,
+    verified_at: null,
+    verification_note: null,
+    rework_requested_by: null,
+    rework_requested_at: null,
+    rework_note: null,
+    rework_of_instance_id: null,
     created_at: '2026-10-01T09:00:00.000Z',
     updated_at: '2026-10-01T09:00:00.000Z',
     deleted_at: null,
@@ -208,6 +221,8 @@ describe('canCompleteInstance', () => {
     expect(canCompleteInstance('supervisor', 'user-1', { assignee_id: 'user-2' })).toBe(true)
     expect(canCompleteInstance('member', 'user-1', { assignee_id: 'user-1' })).toBe(true)
     expect(canCompleteInstance('member', 'user-1', { assignee_id: null })).toBe(true)
+    expect(canCompleteInstance('member', 'user-1', { assignee_id: '' })).toBe(true)
+    expect(canCompleteInstance('member', 'user-1', { assignee_id: '   ' })).toBe(true)
     expect(canCompleteInstance('member', 'user-1', { assignee_id: 'user-2' })).toBe(false)
     expect(canCompleteInstance(null, null, { assignee_id: null })).toBe(false)
   })

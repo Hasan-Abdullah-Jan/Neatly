@@ -12,15 +12,7 @@ for (const [key, value] of Object.entries(fileEnv)) {
 }
 
 const baseURL = process.env.E2E_BASE_URL ?? 'http://127.0.0.1:4173'
-const hasSupabaseEnv = Boolean(
-  process.env.VITE_SUPABASE_URL && process.env.VITE_SUPABASE_ANON_KEY
-)
 
-/**
- * The app refuses to boot without Supabase configuration, so the dev server is
- * only started when those variables are present. The task flow spec also skips
- * itself without a test account.
- */
 export default defineConfig({
   testDir: './e2e',
   fullyParallel: false,
@@ -39,12 +31,10 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'] },
     },
   ],
-  webServer: hasSupabaseEnv
-    ? {
-        command: 'npm run dev -- --host 127.0.0.1 --port 4173',
-        url: baseURL,
-        reuseExistingServer: !process.env.CI,
-        timeout: 120_000,
-      }
-    : undefined,
+  webServer: {
+    command: 'npm run dev -- --host 127.0.0.1 --port 4173',
+    url: baseURL,
+    reuseExistingServer: !process.env.CI,
+    timeout: 120_000,
+  },
 })

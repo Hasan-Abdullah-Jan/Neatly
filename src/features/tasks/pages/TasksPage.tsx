@@ -346,9 +346,15 @@ export function TasksPage() {
                     .filter((dependency) => dependency.task_id === task.id && !dependency.deleted_at)
                     .map((dependency) => taskNameById.get(dependency.depends_on_task_id))
                     .filter((name): name is string => Boolean(name))
-                  const assignee = task.assignee_id
-                    ? memberNameById.get(task.assignee_id) ?? 'Member'
-                    : 'Anyone'
+                  const assignee = task.rotation_enabled
+                    ? 'Fair rotation'
+                    : task.assignee_id
+                      ? memberNameById.get(task.assignee_id) ?? 'Member'
+                      : task.assignee_role
+                        ? `Role: ${task.assignee_role}`
+                        : task.assignee_team_id
+                          ? 'Assigned to team'
+                          : 'Anyone'
                   const area = task.area_id ? areaById.get(task.area_id) : null
                   const busy = busyIds.includes(task.id)
 

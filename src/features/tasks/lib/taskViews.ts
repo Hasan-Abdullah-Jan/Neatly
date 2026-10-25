@@ -188,12 +188,21 @@ export function describeDue(
   return `${formatDueDate(view.instance.due_at, timezone)} at ${time}`
 }
 
+function normalizeId(value: string | null | undefined): string | null {
+  if (typeof value !== 'string') return value ?? null
+  const trimmed = value.trim()
+  return trimmed.length > 0 ? trimmed : null
+}
+
 export function canCompleteInstance(
   role: string | null,
   userId: string | null,
   instance: Pick<TaskInstance, 'assignee_id'>
 ): boolean {
-  if (!userId) return false
+  const normalizedUserId = normalizeId(userId)
+  const assigneeId = normalizeId(instance.assignee_id)
+
+  if (!normalizedUserId) return false
   if (role === 'owner' || role === 'admin' || role === 'supervisor') return true
-  return instance.assignee_id === null || instance.assignee_id === userId
+  return assigneeId === null || assigneeId === normalizedUserId
 }

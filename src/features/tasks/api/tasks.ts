@@ -11,6 +11,7 @@ import type {
 import { fetchAreas, fetchSpaceTaskTemplates } from '@features/areas/api/areas'
 import { fetchSpaceMembers } from '@features/spaces/api/spaces'
 import { findCyclicDependencies, type DependencyEdge } from '../lib/dependencies'
+import { replaceTaskRotationMembers } from '@features/spaces/api/assignments'
 import { addZonedDays, generateInstances, startOfZonedDay } from '../lib/recurrence'
 import type { TaskInput } from './schema'
 
@@ -321,7 +322,8 @@ export async function createTaskRecord(
       due_time: input.dueTime,
       schedule_anchor_at: new Date().toISOString(),
       assignee_id: input.assigneeId,
-      assignee_role: null,
+      assignee_role: input.assigneeRole,
+      assignee_team_id: input.assigneeTeamId,
       required_skills: [],
       supplies_needed: [],
       instructions: null,
@@ -339,6 +341,7 @@ export async function createTaskRecord(
 
   try {
     await saveTaskDependencies(spaceId, task.id, input.dependsOnTaskIds, userId)
+    await replaceTaskRotationMembers(task.id, input.rotationMemberIds)
   } catch (dependencyError) {
     await setTaskDeleted(task.id, true)
     throw dependencyError
@@ -366,6 +369,8 @@ export async function updateTaskRecord(
       due_time: input.dueTime,
       schedule_anchor_at: now,
       assignee_id: input.assigneeId,
+      assignee_role: input.assigneeRole,
+      assignee_team_id: input.assigneeTeamId,
       updated_at: now,
     })
     .eq('id', taskId)
@@ -389,6 +394,7 @@ export async function updateTaskRecord(
   if (instanceError) throw new Error(instanceError.message)
 
   await saveTaskDependencies(spaceId, taskId, input.dependsOnTaskIds, userId)
+  await replaceTaskRotationMembers(taskId, input.rotationMemberIds)
   return data as Task
 }
 

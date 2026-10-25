@@ -1,12 +1,28 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import { Button } from '@components/ui/Button'
 import { Checkbox } from '@components/ui/Checkbox'
 import { Input, Textarea } from '@components/ui/Input'
 import { Modal } from '@components/ui/Modal'
 import { Select } from '@components/ui/Select'
+import { ChecklistEditor } from './ChecklistEditor'
 import type { Area, Task, TaskDependency, TaskFrequency } from '@/types/database'
 import type { SpaceMember } from '@features/spaces/api/spaces'
 import { taskInputSchema, type TaskInput } from '../api/schema'
+import { getChecklistItems, replaceChecklist } from '../api/checklist'
+import { fetchSpaceTeams } from '@features/spaces/api/teams'
+import { useAuth } from '@contexts/AuthContext'
+import type { MembershipRole } from '@/types/database'
+import { useToastHelpers } from '@components/ui/Toast'
+import { getTaskRotationMemberIds } from '@features/spaces/api/assignments'
+
+const roleOptions: Array<{ value: MembershipRole; label: string }> = [
+  { value: 'owner', label: 'Owner' },
+  { value: 'admin', label: 'Admin' },
+  { value: 'supervisor', label: 'Supervisor' },
+  { value: 'member', label: 'Member' },
+  { value: 'cleaner', label: 'Cleaner' },
+  { value: 'auditor', label: 'Auditor' },
+]
 
 const frequencyOptions: Array<{ value: TaskFrequency; label: string }> = [
   { value: 'daily', label: 'Daily' },
@@ -41,6 +57,8 @@ export function TaskForm({
   onClose,
   onSubmit,
 }: TaskFormProps) {
+  const { currentSpace } = useAuth()
+  const { showError } = useToastHelpers()
   const [name, setName] = useState(task?.name ?? '')
   const [areaId, setAreaId] = useState(task?.area_id ?? '')
   const [frequency, setFrequency] = useState<TaskFrequency>(task?.frequency ?? 'weekly')
@@ -52,6 +70,12 @@ export function TaskForm({
     task?.estimated_minutes ? String(task.estimated_minutes) : ''
   )
   const [assigneeId, setAssigneeId] = useState(task?.assignee_id ?? '')
+  const [assigneeRole, setAssigneeRole] = useState<MembershipRole | ''>(task?.assignee_role ?? '')
+  const [assigneeTeamId, setAssigneeTeamId] = useState(task?.assignee_team_id ?? '')
+  const [rotationMemberIds, setRotationMemberIds] = useState<string[]>([])
+  const [rotationLoading, setRotationLoading] = useState(false)
+  const [rotationLoadError, setRotationLoadError] = useState(false)
+  const [teams, setTeams] = useState<Array<{ id: string; name: string }>>([])
   const [description, setDescription] = useState(task?.description ?? '')
   const [dependsOn, setDependsOn] = useState<string[]>(() =>
     task
@@ -60,7 +84,75 @@ export function TaskForm({
           .map((dependency) => dependency.depends_on_task_id)
       : []
   )
+  const [checklistItems, setChecklistItems] = useState<string[]>([])
   const [errors, setErrors] = useState<Record<string, string>>({})
+
+  useEffect(() => {
+    if (task?.id && isOpen) {
+      loadChecklist()
+    } else if (!task) {
+      setChecklistItems([])
+    }
+  }, [task?.id, isOpen])
+
+  useEffect(() => {
+    if (!isOpen || !currentSpace?.id) return
+    let active = true
+    if (task?.id) {
+      setRotationMemberIds([])
+      setRotationLoadError(false)
+      setRotationLoading(true)
+    }
+    void fetchSpaceTeams(currentSpace.id)
+      .then((entries) => {
+        if (active) setTeams(entries.map(({ team }) => ({ id: team.id, name: team.name })))
+      })
+      .catch((error: unknown) => {
+        if (active) showError('Could not load teams', error instanceof Error ? error.message : 'Try again.')
+      })
+    if (task?.id) {
+      void getTaskRotationMemberIds(task.id)
+        .then((ids) => {
+          if (active) setRotationMemberIds(ids)
+        })
+        .catch((error: unknown) => {
+          if (active) {
+            setRotationLoadError(true)
+            showError('Could not load rotation members', error instanceof Error ? error.message : 'Try again.')
+          }
+        })
+        .finally(() => {
+          if (active) setRotationLoading(false)
+        })
+    } else {
+      setRotationMemberIds([])
+      setRotationLoadError(false)
+      setRotationLoading(false)
+    }
+    return () => {
+      active = false
+    }
+  }, [currentSpace?.id, isOpen, showError, task?.id])
+
+  const loadChecklist = async () => {
+    if (!task?.id) return
+    try {
+      const items = await getChecklistItems(task.id)
+      setChecklistItems(items.map((item) => item.label))
+    } catch (err) {
+      console.error('Failed to load checklist:', err)
+    }
+  }
+
+  const handleSaveChecklist = async () => {
+    if (!task?.id) return
+    try {
+      await replaceChecklist(task.id, checklistItems)
+    } catch (err) {
+      console.error('Failed to save checklist:', err)
+      throw err
+    }
+  }
 
   const areaOptions = useMemo(
     () => [
@@ -99,14 +191,28 @@ export function TaskForm({
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault()
+    if (rotationLoading || rotationLoadError) return
+
+    if (task?.id && checklistItems.length > 0) {
+      try {
+        await handleSaveChecklist()
+      } catch (err: any) {
+        setErrors({ form: err.message || 'Failed to save checklist' })
+        return
+      }
+    }
+
     const input: TaskInput = {
       name,
-      areaId: areaId || null,
+      areaId: areaId.trim() || null,
       frequency,
       customFrequencyDays: frequency === 'custom' ? Number(customDays) : null,
       dueTime,
       estimatedMinutes: estimatedMinutes ? Number(estimatedMinutes) : null,
-      assigneeId: assigneeId || null,
+      assigneeId: assigneeId.trim() || null,
+      assigneeRole: assigneeRole || null,
+      assigneeTeamId: assigneeTeamId.trim() || null,
+      rotationMemberIds,
       description: description.trim() ? description : null,
       dependsOnTaskIds: dependsOn,
     }
@@ -158,10 +264,84 @@ export function TaskForm({
             label="Assigned to"
             options={memberOptions}
             value={assigneeId}
-            onChange={setAssigneeId}
-            hint="Anyone means any member can pick it up."
+            onChange={(value) => {
+              setAssigneeId(value)
+              setAssigneeRole('')
+              setAssigneeTeamId('')
+            }}
+            hint="Assign to a person, role, team, or area."
           />
         </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Select
+            label="Role (optional)"
+            options={[
+              { value: '', label: 'No role target' },
+              ...roleOptions,
+            ]}
+            value={assigneeRole}
+            onChange={(value) => {
+              setAssigneeRole(value as MembershipRole | '')
+              if (value) {
+                setAssigneeId('')
+                setAssigneeTeamId('')
+              }
+            }}
+          />
+          <Select
+            label="Team (optional)"
+            options={[
+              { value: '', label: 'No team target' },
+              ...teams.map((team) => ({ value: team.id, label: team.name })),
+            ]}
+            value={assigneeTeamId}
+            onChange={(value) => {
+              setAssigneeTeamId(value)
+              if (value) {
+                setAssigneeId('')
+                setAssigneeRole('')
+              }
+            }}
+          />
+        </div>
+
+        {members.length > 0 && (
+          <fieldset className="rounded-lg border border-border p-3">
+            <legend className="px-1 text-sm font-medium text-text">Fair rotation (optional)</legend>
+            <p className="mb-2 text-xs text-text-muted">
+              Upcoming recurring instances rotate through selected members. Active away periods are
+              skipped automatically.
+            </p>
+            {rotationLoading && (
+              <p className="mb-2 text-xs text-text-muted">Loading saved rotation...</p>
+            )}
+            {rotationLoadError && (
+              <p className="mb-2 text-sm text-danger-700" role="alert">
+                Saved rotation could not be loaded. Close and reopen the task before saving.
+              </p>
+            )}
+            <div className="max-h-40 space-y-2 overflow-y-auto">
+              {members.map((member) => {
+                const id = member.membership.user_id
+                return (
+                  <Checkbox
+                    key={id}
+                    label={member.profile?.full_name?.trim() || 'Member'}
+                    checked={rotationMemberIds.includes(id)}
+                    onCheckedChange={(checked) =>
+                      setRotationMemberIds((current) =>
+                        checked
+                          ? [...new Set([...current, id])]
+                          : current.filter((memberId) => memberId !== id)
+                      )
+                    }
+                  />
+                )
+              })}
+            </div>
+          </fieldset>
+        )}
 
         <div className="grid gap-4 sm:grid-cols-3">
           <Select
@@ -227,6 +407,18 @@ export function TaskForm({
           hint="Only the task details are shown. No photos or evidence are requested."
         />
 
+        <fieldset className="rounded-lg border border-border p-3">
+          <legend className="px-1 text-sm font-medium text-text">Checklist (optional)</legend>
+          <p className="mb-2 text-xs text-text-muted">
+            Add steps that must be completed before submitting the task. Maximum 30 steps.
+          </p>
+          <ChecklistEditor
+            items={checklistItems}
+            onChange={setChecklistItems}
+            disabled={submitting}
+          />
+        </fieldset>
+
         {dependencyOptions.length > 0 && (
           <fieldset className="rounded-lg border border-border p-3">
             <legend className="px-1 text-sm font-medium text-text">Waiting on (optional)</legend>
@@ -257,7 +449,11 @@ export function TaskForm({
           <Button type="button" variant="ghost" onClick={onClose} disabled={submitting}>
             Cancel
           </Button>
-          <Button type="submit" loading={submitting} disabled={!name.trim()}>
+          <Button
+            type="submit"
+            loading={submitting}
+            disabled={!name.trim() || rotationLoading || rotationLoadError}
+          >
             {task ? 'Save changes' : 'Create task'}
           </Button>
         </div>

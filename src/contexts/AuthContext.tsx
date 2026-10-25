@@ -26,8 +26,6 @@ interface AuthContextValue {
   updateProfile: (data: Partial<Profile>) => Promise<{ error: Error | null }>
   setCurrentSpace: (space: Space | null) => void
   refreshSpaces: () => Promise<Space[]>
-  toggleDemoMode: () => void
-  isDemoMode: boolean
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
@@ -39,7 +37,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [currentSpace, setCurrentSpace] = useState<Space | null>(null)
   const [spaces, setSpaces] = useState<Space[]>([])
   const [loading, setLoading] = useState(true)
-  const [isDemoMode, setIsDemoMode] = useState(false)
 
   const fetchProfile = useCallback(async (userId: string) => {
     const result = await supabase
@@ -166,11 +163,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error: error ? new Error(error.message) : null }
   }
 
-  const toggleDemoMode = useCallback(() => {
-    setIsDemoMode((prev) => !prev)
-    // TODO: Implement demo mode logic in Level 12
-  }, [])
-
   return (
     <AuthContext.Provider
       value={{
@@ -187,8 +179,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         updateProfile,
         setCurrentSpace,
         refreshSpaces,
-        toggleDemoMode,
-        isDemoMode,
       }}
     >
       {children}

@@ -10,6 +10,10 @@ Last updated: 2026-10-25
 | 2 | Space & Area Setup: onboarding, template packs, space settings, area shell | Built and locally verified |
 | 3 | Task & Routine Engine: recurrence, instances, Today/Tasks, completion, undo | Built and locally verified; database flows unverified |
 | 4 | Issues: reporting, lifecycle, assignment, timeline, photos, patterns | Built and locally verified; database flows unverified |
+| 7 | Shared spaces: teams, invitations, assignment targets, rotation, swaps, comments, workload | Implemented locally; database flows unverified |
+| 8 | Notifications & habits | Partial; inbox added, event/delivery/habit workflows remain |
+| 12 | Demo mode: isolated sample spaces, walkthrough, role switcher, reset | Implemented locally; simulated workflows only |
+| 13 | Hardening, privacy, QA, deployment documentation | Partial; local implementation added, live Supabase/deployment checks deferred |
 
 **Verification run at the end of Level 4**
 
@@ -19,6 +23,16 @@ Last updated: 2026-10-25
 - `npm run test:e2e` — both Playwright specs were discovered and skipped themselves (2 skipped) because Supabase environment variables and `E2E_EMAIL`/`E2E_PASSWORD` were absent. This is **not** a passing end-to-end run, and neither spec has been executed against a live database.
 - No live Supabase project or `.env.local` was available, so migrations 011/012, RLS policies, SECURITY DEFINER RPCs, Storage policies, and database-backed flows were not executed against Postgres.
 - The initial Level 1–4 work is committed as `a91a184`.
+
+**Level 7 verification (2026-10-25)**
+
+- `npm test` — most recent run passed: 16 files, 124 tests.
+- `npm run build` — most recent run passed after fixing privacy/shared-device/E2E TypeScript errors.
+- `npm run lint` — reports warnings in the current worktree; see the individual diagnostics before treating it as clean.
+- No Supabase CLI/`psql`, configured project, or database credentials are available here. Migrations and RLS/security-definer behavior are **not** verified against Postgres.
+- The demo Playwright suite passed locally: 5 tests, including walkthrough, axe scan, rework, and 360/390/768px overflow checks.
+- `npm audit --audit-level=high` — passed with zero reported vulnerabilities.
+- In-app notifications now have an inbox, read state, recipient-scoped RLS, and unread count. No task/issue/supply event producers or email/push delivery are wired yet.
 
 ---
 
@@ -377,8 +391,8 @@ Statuses are `reported` (Open), `acknowledged` (Assigned), `in_progress`, `resol
 
 ## Known issues
 
-1. **No live database run.** Migrations 001–012, SECURITY DEFINER RPCs, Storage policies, and all RLS policies have not been applied to a real Supabase instance in this workspace. Treat database behavior as unverified until tested.
-2. **No automated RLS/permission integration tests.** Client-side permission rules now have unit tests, but no test executes policies against Postgres or proves cross-space isolation. The Level 1 requirement for database permission tests is still unmet.
+1. **No live database run.** Migrations 001–020, SECURITY DEFINER RPCs, Storage policies, and all RLS policies have not been applied to a real Supabase instance in this workspace. Treat database behavior as unverified until tested.
+2. **Database permission tests are not run here.** Cross-space and supply-authorization SQL regression scripts are checked in, but no configured Postgres/Supabase instance is available to execute them or prove deployed cross-space isolation.
 3. **No `.env.local`.** `src/lib/supabase.ts` throws when `VITE_SUPABASE_URL` or `VITE_SUPABASE_ANON_KEY` is missing, so the app cannot boot without configuration.
 4. **Manager-only generation.** Because instance inserts are manager-restricted, members cannot fill missing schedules. There is no cron job, so long-idle spaces need a manager visit or Refresh schedule.
 5. **Playwright has never completed a run.** Both specs and the configuration exist, and a credential-free run skips cleanly (2 skipped), but no live Supabase project or test account was available. A skipped run is not a passing end-to-end verification.
@@ -413,4 +427,228 @@ Level 4 is implemented in the working tree and locally verified, but not live-ve
 - Add SQL/API permission tests that prove cross-space isolation and role restrictions.
 - Keep subsequent changes in small commits; the initial Levels 1–4 work is committed.
 
-Level 5 scope is not defined in this repository yet. It should build on the Level 3 task engine and Level 4 issue record without changing their core semantics.
+## Level 5 — QR Codes & Evidence
+
+### Database Migration
+- Migration `013_level5_qr_evidence.sql` adds:
+  - Evidence rules on tasks and templates (`none`, `checklist`, `photo`, `supervisor_review`)
+  - Verification fields on task instances (status, submitted_at, verified_by, verified_at, verification_note)
+  - Rework fields (rework_requested_by, rework_requested_at, rework_note, rework_of_instance_id)
+  - `task_checklist_items` table for checklist definitions
+  - `task_checklist_results` table for checklist execution records
+  - Issue source links (source_task_instance_id, source_checklist_item_id)
+  - Rotatable area QR tokens with rate-limited public lookup
+  - Shared device PIN mode with sessions
+  - SECURITY DEFINER RPCs for all checklist, verification, and shared device operations
+  - Private `task-evidence` storage bucket with policies
+  - Trigger guards to prevent direct status/verification field updates
+
+### UI Implementation
+- `ChecklistEditor` component for editing checklist steps (max 30, 160 chars each)
+- `ChecklistExecution` component for answering checklists (done/not applicable/problem)
+- `VerificationPanel` component for supervisor verification and rework requests
+- `PinSetupModal` for setting/removing shared device PINs
+- `SessionSelector` for member sign-in on shared devices
+- `useSharedDevice` hook for managing shared device sessions
+- Updated `TaskForm` to include checklist editor
+- Updated database types for all Level 5 fields
+
+### RPC Functions
+- `rotate_area_qr_token` - Generate new QR token for an area
+- `lookup_area_by_qr_token` - Public rate-limited QR lookup
+- `set_shared_device_pin` / `remove_shared_device_pin` - PIN management
+- `shared_device_pin_status` - Check PIN status and lock state
+- `list_shared_device_members` - List members with PIN status
+- `open_shared_device_session` / `get_shared_device_session` / `close_shared_device_session` - Session management
+- `resolve_task_actor` - Resolve acting user (signed-in or session-based)
+- `effective_evidence_rule` - Get the active evidence rule for a task
+- `task_has_unanswered_checklist` - Check if instance has unanswered items
+- `replace_task_checklist` - Atomically replace checklist steps
+- `save_checklist_result` - Save checklist answer with optional issue link
+- Updated task action RPCs with device session token support
+- `attach_task_evidence` - Attach/remove evidence photos
+- `verify_task_instance` - Supervisor verification
+- `request_task_rework` - Request rework with new instance creation
+- `purge_expired_task_evidence` - Clean up old evidence based on retention
+- Updated `create_issue` with source fields and device session token
+
+### Level 5 Status
+- Database migration: Complete
+- UI components: Complete
+- Database types: Updated
+- Tests: Not yet implemented
+- Integration with task completion flow: Not yet integrated (Level 5 needs integration into Today/Tasks pages)
+
+---
+
+## Level 6 — Supplies
+
+### Database Migration
+- Migration `014_level6_supplies.sql` adds:
+  - `update_supply_quantity` - Increment/decrement quantity with auto status update
+  - `mark_supply_low` - Manually mark item as low stock
+  - `approve_supply_request` / `reject_supply_request` - Manager request approval
+  - `fulfill_supply_request` - Mark request as fulfilled and update quantity
+  - `record_supply_purchase` - Record purchase and update quantity
+
+### UI Implementation
+- `SupplyCard` component for displaying supply items with quantity controls
+- `SupplyFormModal` for adding/editing supply items
+- `ShoppingList` for low-stock items with purchase recording
+- `RequestList` for supply request management
+- `RequestModal` for submitting new supply requests
+- `SuppliesPage` main page with tabs for Catalog, Shopping List, and Requests
+- API functions for all supply operations
+- Route added: `/supplies`
+
+### Features
+- Supply catalog with name, category, unit, quantity, min threshold, location
+- Quick quantity update with +/- stepper
+- Manual "mark low" button
+- Shopping list auto-generated from items below threshold
+- Supply request workflow (pending → approved/rejected → fulfilled)
+- Request approvals by managers
+- Purchase recording updates quantity and status
+
+### Level 6 Status
+- Database migration: Complete
+- UI components: Complete
+- API functions: Complete
+- Route: Added
+- Tests: Not yet implemented
+
+---
+
+## Level 7 — Shared Spaces
+
+### Database Migration
+- Migration `015_level7_shared_spaces_rpc.sql` adds:
+  - `create_team` / `update_team` - Team management
+  - `add_team_member` - Add members to teams
+  - `create_invitation` / `accept_invitation` - Invitation system
+  - `set_away` - Away/pause mode for members
+  - `request_swap` / `respond_swap` - Task swap requests
+- Migration `016_level7_rotation.sql` adds role/team task targets, selected-member rotation state, a database trigger that assigns recurring instances in round-robin order while skipping active away periods, and tightened assignment/invitation/swap policies and RPCs.
+
+### API Implementation
+- `assignments.ts` uses the active space explicitly and routes sensitive operations through checked RPCs.
+- Task setup assigns by person, role, team, or area, and can select members for fair rotation.
+- Teams can be created, edited, and rostered. Invitations support role and expiry, link copy, acceptance, and revoke. Email dispatch is not configured; the UI states this and requires sharing the link.
+- Members can set away periods; existing assigned instances in the away window are unassigned, and new rotations skip active-away members.
+- Task-instance cards include shared comments and a request-swap / "can't do this" flow. Other eligible members or a supervisor can respond; completed request rows remain visible in request history.
+- Organization navigation includes teams, invitations, away periods, and a weekly workload view. The view shows estimated minutes alphabetically, not as a leaderboard.
+- A manager-only suggestion appears when one available member has at least 50% more estimated assigned minutes than the available-member average in each of four previous full weeks. Away members are excluded from that week's comparison; the card states the reason and links to assignment review.
+
+### Level 7 Status
+- Database migration: Written; apply and validate against Supabase before release
+- API functions and UI components: Implemented
+- Person/role/team/area assignment: Implemented
+- Away-aware fair rotation: Implemented in a database trigger; live behavior unverified
+- Workload view and four-week imbalance suggestion: Implemented and unit-tested
+- Task comments, swap/unable flow, and visible request history: Implemented
+- Link invitations, email targeting, expiry, acceptance, and revocation: Implemented; email delivery is deferred
+- Unit tests: Rotation and workload rule tests added
+
+---
+
+## Remaining Levels (8-13)
+
+### Level 8 — Notifications & Habits
+- In-app notification center (implemented locally: inbox, unread count, mark read/all read; event generation remains unwired)
+- Email/web push via Edge Functions
+- Notification types: task reminders, due/overdue, assignments, issues, supplies, milestones
+- Per-type toggles, quiet hours, pause mode
+- Reduce-over-time logic for repeated on-time completion
+- Flexible streaks with tolerance for rest/travel/illness
+- "Make it easier" prompt after 3 misses
+- Weekly recap with calm tone
+- Daily maximum limit
+
+### Level 9 — Insights & Recommendations
+- History: task, issue, supply history with CSV/PDF export
+- Insights dashboard: current tasks, overdue, open issues, filters
+- Recommendation engine with transparent rules:
+  - Task overdue ≥3 times → reduce/split/change time/reassign
+  - Recurring area+category issues → review frequency/capacity
+  - Supply below minimum → add to list/request
+  - Cluttered storage → organization task
+  - Plant check overdue → prompt check
+  - Many tasks same day → spread across week
+  - No recent area record → suggest check
+- Trend view with causal disclaimer
+- Unit tests for all rules
+
+### Level 10A — Plants
+- Plant record: name, area, light, watering preference, care notes, caution fields
+- Reminders: "check the plant" not "water now"
+- Placement suggestions conditional on user's light/effort
+- No health/air purification claims
+- Dismiss/helpful/adjust frequency on suggestions
+
+### Level 10B — Inventory
+- Item: name, category, area/location, quantity, photo, notes, warranty, replacement reminder
+- Search by name/area/category
+- Shared equipment check-out/return
+- Simple, not enterprise inventory
+
+### Level 10C — Maintenance Calendar
+- Recurring non-cleaning maintenance (filters, appliances, drains, equipment)
+- Item, due date, instructions, responsible person, completion note, history
+- Repair issues can be assigned to external service
+- Visually/logically distinct from cleaning tasks
+
+### Level 10D — Decluttering
+- Small zone-based sessions (drawer, shelf, desk)
+- Decision list: keep/relocate/donate/recycle/discard
+- Track completed zones
+- Flag repeatedly cluttered zones (feeds Level 9)
+
+### Level 10E — Seasonal & Sustainable Prompts
+- Seasonal checks (windows, dust, ventilation, leaves, dampness)
+- Waste separation, reusable cloths, refillable products
+- All conditional, optional, dismissible
+
+### Level 11 — Polish
+- Visual: consistent spacing, glass effects, motion, skeleton loaders, empty states
+- Interaction: swipe optional, visible buttons, undo, duration display
+- Accessibility: AA contrast, focus order, labels, aria-live, 44px targets, reduced-motion
+- i18n: English + RTL stub (Urdu), locale-aware dates/numbers
+- Dark mode + org branding with contrast checking
+- Performance: code splitting, image compression, Lighthouse ≥90
+- PWA: installable manifest, cached shell, offline queue
+
+### Level 12 — Demo Mode
+- `/demo` is a standalone route that loads without authentication or Supabase configuration.
+- The browser-tab session sandbox seeds the apartment during the walkthrough and includes an organization with five areas, cleaner/supervisor/admin roles, generated QR codes, an open issue, a supply request, and a repeatedly overdue task with a transparent recommendation.
+- Walkthrough actions cover apartment setup, completion/history, low stock, organization task assignment, simulated QR scan, checklist submission, verification or linked rework, issue reporting and resolution, dashboard, and recommendation actions.
+- The role switcher lets one person play the resident, cleaner, supervisor, or admin. **Reset demo** clears the session sandbox and starts fresh.
+- Demo workflows are illustrative local state transitions; they do not test live Supabase, database permissions, Storage, or camera-based QR scanning. The walkthrough follows the steps listed in the product request; no separate “section 16” script was present in this repository.
+
+### Level 13 — Harden & Ship
+- Security review found a shared-device PIN lockout issue. Migration `017_shared_device_pin_lockout.sql` returns failed-authentication results normally so the counter/lockout commit; database verification is pending.
+- Migration `018_privacy_account_lifecycle.sql` adds caller-scoped JSON export, export/deletion audit records, role/verification audit triggers, and account-deletion preparation.
+- Migration `019_in_app_notifications.sql` adds recipient-scoped persisted in-app notifications and read state. The inbox is locally implemented; producers and outbound delivery remain unbuilt.
+- Migration `020_harden_supply_mutations.sql` moves supply write authorization into privileged RPCs, requires manager roles, prevents direct request status writes, and only allows approved requests to be fulfilled. A staging permission test script was added; live DB verification is still pending.
+- The requested security review found the Level 6 supply mutation authorization issue (medium severity, high confidence). Migration 020 and `supabase/tests/supply_mutation_authorization.sql` address it in source; the test requires a configured staging Supabase database.
+- Settings offers JSON/CSV exports and account deletion. The public privacy page and a Supabase `delete-account` Edge Function are added; deployment and DB behavior must be tested before release.
+- Netlify SPA and security headers, a cross-space RLS smoke test, a database staging seed, demo Playwright/axe tests, 360/390/768 viewport tests, and device-local minimal error diagnostics are added.
+- Added architecture and ER diagrams, role matrix, work/deferred list, deployment notes, user guide, cleaner quick-start, and Level 5–10 QA mapping under `docs/`.
+- No live Postgres, Storage policies, Edge Function, staging host, or backup restore could be verified without credentials. Evidence cleanup still requires a scheduled job. No central error-monitoring service is configured.
+
+---
+
+## Implementation Priority
+
+Remaining implementation and release blockers:
+
+1. Deploy and verify migrations 013–020, RLS, Storage, PIN lockout, supply permissions, and account deletion in staging.
+2. Complete Level 5 task-screen/evidence integration and outstanding Level 6 history/reminder behavior.
+3. Wire Level 8 event producers, notification preference enforcement, delivery failures, and remaining habit requirements.
+4. Build the Level 9 insights and recommendation engine; privacy export is not operational CSV/PDF reporting.
+5. Build Levels 10A–10E.
+6. Finish Level 11 accessibility/i18n/branding/offline mutation queue and run full-screen axe and Lighthouse audits.
+7. Provision staging/production hosting, schedule evidence cleanup, verify backups, and execute the QA report against deployed services.
+
+---
+
+## Next Steps

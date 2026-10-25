@@ -17,6 +17,8 @@ import {
   type DependencyBlocker,
   type TaskInstanceView,
 } from '../lib/taskViews'
+import { TaskDiscussion } from './TaskDiscussion'
+import { TaskSwapControl } from './TaskSwapControl'
 
 export interface TaskInstanceCardProps {
   view: TaskInstanceView
@@ -104,6 +106,10 @@ export function TaskInstanceCard({
                   Waiting on {blockedNames}. Complete or skip the latest prerequisite first.
                 </span>
               </p>
+            )}
+            <TaskDiscussion instanceId={instance.id} />
+            {!completed && !skipped && (
+              <TaskSwapControl instanceId={instance.id} assigneeId={instance.assignee_id} />
             )}
             {!canComplete && !blocked && !completed && !skipped && (
               <p className="mt-3 text-sm text-text-muted">
@@ -233,6 +239,10 @@ export function TaskInstanceCard({
           <p className="mt-1 text-xs text-amber-700 dark:text-amber-300">
             Waiting on {blockedNames}
           </p>
+        )}
+        <TaskDiscussion instanceId={instance.id} />
+        {!completed && !skipped && (
+          <TaskSwapControl instanceId={instance.id} assigneeId={instance.assignee_id} />
         )}
         {!canComplete && !blocked && !completed && !skipped && (
           <p className="mt-1 text-xs text-text-muted">Assigned to someone else</p>

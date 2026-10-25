@@ -9,9 +9,10 @@ import { useAuth } from '@contexts/AuthContext'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { User, Bell, Palette, Shield, Key, Trash2, Mail, Loader2, Sun, Moon, Monitor, Download } from 'lucide-react'
+import { User, Bell, Palette, Shield, Mail, Loader2, Sun, Moon, Monitor } from 'lucide-react'
 import { cn } from '@lib/utils'
 import { useToastHelpers } from '@components/ui/Toast'
+import { PrivacyControls } from '@features/privacy/components/PrivacyControls'
 
 const profileSchema = z.object({
   fullName: z.string().min(2, 'Name must be at least 2 characters'),
@@ -302,28 +303,18 @@ export function SettingsPage() {
               <CardDescription>Manage your data and security settings</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="space-y-4">
+              <div className="space-y-6">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="font-medium text-text">Two-factor authentication</p>
                     <p className="text-sm text-text-muted">Add an extra layer of security to your account</p>
                   </div>
-                  <Button variant="outline" leftIcon={<Key className="w-4 h-4" />}>Enable 2FA</Button>
+                  <p className="text-sm text-text-muted">Not configured</p>
                 </div>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium text-text">Export my data</p>
-                    <p className="text-sm text-text-muted">Download a copy of all your data</p>
-                  </div>
-                  <Button variant="outline" leftIcon={<Download className="w-4 h-4" />}>Export data</Button>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium text-text">Delete account</p>
-                    <p className="text-sm text-text-muted">Permanently delete your account and all data</p>
-                  </div>
-                  <Button variant="destructive" leftIcon={<Trash2 className="w-4 h-4" />}>Delete account</Button>
-                </div>
+                <PrivacyControls />
+                <a href="/privacy" className="inline-flex min-h-11 items-center text-sm font-medium text-primary-700 underline dark:text-primary-300">
+                  Read the privacy page
+                </a>
               </div>
             </CardContent>
           </Card>

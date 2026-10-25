@@ -94,6 +94,12 @@ export type Database = {
         Update: NotificationPreferenceUpdate
         Relationships: []
       }
+      notifications: {
+        Row: Notification
+        Insert: NotificationInsert
+        Update: NotificationUpdate
+        Relationships: []
+      }
       recommendations: {
         Row: Recommendation
         Insert: RecommendationInsert
@@ -154,6 +160,30 @@ export type Database = {
         Update: TaskDependencyUpdate
         Relationships: []
       }
+      task_checklist_items: {
+        Row: TaskChecklistItem
+        Insert: TaskChecklistItemInsert
+        Update: TaskChecklistItemUpdate
+        Relationships: []
+      }
+      task_checklist_results: {
+        Row: TaskChecklistResult
+        Insert: TaskChecklistResultInsert
+        Update: TaskChecklistResultUpdate
+        Relationships: []
+      }
+      shared_device_pins: {
+        Row: SharedDevicePin
+        Insert: SharedDevicePinInsert
+        Update: SharedDevicePinUpdate
+        Relationships: []
+      }
+      shared_device_sessions: {
+        Row: SharedDeviceSession
+        Insert: SharedDeviceSessionInsert
+        Update: SharedDeviceSessionUpdate
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -182,24 +212,74 @@ export type Database = {
         }
         Returns: Space
       }
+      replace_task_rotation_members: {
+        Args: { p_task_id: string; p_user_ids: string[] }
+        Returns: undefined
+      }
+      create_team: {
+        Args: { p_space_id: string; p_name: string; p_description?: string | null; p_color?: string | null }
+        Returns: Team
+      }
+      update_team: {
+        Args: { p_team_id: string; p_name?: string | null; p_description?: string | null; p_color?: string | null }
+        Returns: Team
+      }
+      add_team_member: {
+        Args: { p_team_id: string; p_user_id: string; p_role?: string }
+        Returns: TeamMember
+      }
+      create_invitation: {
+        Args: { p_space_id: string; p_email?: string | null; p_role?: MembershipRole; p_expires_at?: string | null }
+        Returns: Invitation
+      }
+      accept_invitation: {
+        Args: { p_token: string }
+        Returns: Membership
+      }
+      set_away: {
+        Args: { p_space_id: string; p_type: AwayType; p_starts_at: string; p_ends_at?: string | null; p_reason?: string | null }
+        Returns: MemberAway
+      }
+      request_swap: {
+        Args: { p_task_instance_id: string; p_requested_to?: string | null; p_reason?: string | null }
+        Returns: TaskSwap
+      }
+      respond_swap: {
+        Args: { p_swap_id: string; p_response: string }
+        Returns: TaskSwap
+      }
+      cancel_swap: {
+        Args: { p_swap_id: string }
+        Returns: undefined
+      }
+      revoke_invitation: {
+        Args: { p_invitation_id: string }
+        Returns: undefined
+      }
       complete_task_instance: {
         Args: {
           p_instance_id: string
           p_notes?: string | null
           p_duration_minutes?: number | null
+          p_photos?: string[]
+          p_device_session_token?: string | null
         }
         Returns: TaskInstance
       }
       undo_task_completion: {
-        Args: { p_instance_id: string }
+        Args: { p_instance_id: string; p_device_session_token?: string | null }
         Returns: TaskInstance
       }
       skip_task_instance: {
-        Args: { p_instance_id: string; p_reason?: string | null }
+        Args: {
+          p_instance_id: string
+          p_reason?: string | null
+          p_device_session_token?: string | null
+        }
         Returns: TaskInstance
       }
       reopen_task_instance: {
-        Args: { p_instance_id: string }
+        Args: { p_instance_id: string; p_device_session_token?: string | null }
         Returns: TaskInstance
       }
       fresh_start_space: {
@@ -221,8 +301,102 @@ export type Database = {
           p_priority?: IssuePriority
           p_photos?: string[]
           p_due_at?: string | null
+          p_source_instance_id?: string | null
+          p_source_checklist_item_id?: string | null
+          p_device_session_token?: string | null
         }
         Returns: Issue
+      }
+      rotate_area_qr_token: {
+        Args: { p_area_id: string }
+        Returns: string
+      }
+      lookup_area_by_qr_token: {
+        Args: { p_token: string }
+        Returns: QrAreaLookup | null
+      }
+      set_shared_device_pin: {
+        Args: { p_space_id: string; p_pin: string }
+        Returns: undefined
+      }
+      remove_shared_device_pin: {
+        Args: { p_space_id: string }
+        Returns: undefined
+      }
+      shared_device_pin_status: {
+        Args: { p_space_id: string }
+        Returns: { has_pin: boolean; locked_until: string | null }
+      }
+      list_shared_device_members: {
+        Args: { p_space_id: string }
+        Returns: SharedDeviceMember[]
+      }
+      open_shared_device_session: {
+        Args: { p_space_id: string; p_user_id: string; p_pin: string }
+        Returns: Json
+      }
+      get_shared_device_session: {
+        Args: { p_space_id: string; p_token: string }
+        Returns: Json
+      }
+      close_shared_device_session: {
+        Args: { p_token: string }
+        Returns: undefined
+      }
+      get_my_privacy_export: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
+      prepare_my_account_deletion: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
+      log_self_service_audit: {
+        Args: { p_action: string }
+        Returns: undefined
+      }
+      replace_task_checklist: {
+        Args: { p_task_id: string; p_labels: string[] }
+        Returns: undefined
+      }
+      save_checklist_result: {
+        Args: {
+          p_instance_id: string
+          p_checklist_item_id: string
+          p_status: ChecklistResultStatus
+          p_note?: string | null
+          p_issue_id?: string | null
+          p_device_session_token?: string | null
+        }
+        Returns: TaskChecklistResult
+      }
+      attach_task_evidence: {
+        Args: {
+          p_instance_id: string
+          p_photos: string[]
+          p_device_session_token?: string | null
+        }
+        Returns: TaskCompletion
+      }
+      verify_task_instance: {
+        Args: {
+          p_instance_id: string
+          p_note?: string | null
+          p_device_session_token?: string | null
+        }
+        Returns: TaskInstance
+      }
+      request_task_rework: {
+        Args: {
+          p_instance_id: string
+          p_note: string
+          p_device_session_token?: string | null
+        }
+        Returns: TaskInstance
+      }
+      purge_expired_task_evidence: {
+        Args: { p_space_id?: string | null }
+        Returns: number
       }
       assign_issue: {
         Args: {
@@ -370,6 +544,12 @@ export type SpaceSettings = {
   dataRetentionDays?: number | null
   reminderDefaults?: ReminderDefaults
   onboardingCompletedAt?: string
+  sharedDevice?: SharedDeviceSettings
+}
+
+export type SharedDeviceSettings = {
+  enabled?: boolean
+  sessionMinutes?: number
 }
 
 export type EvidenceRule = 'none' | 'checklist' | 'photo' | 'supervisor_review'
@@ -429,6 +609,7 @@ export type Area = {
   name: string
   category: string | null
   qr_token: string | null
+  qr_token_rotated_at: string | null
   active: boolean
   sort_order: number
   created_at: string
@@ -455,6 +636,7 @@ export type AreaUpdate = {
   name?: string
   category?: string | null
   qr_token?: string | null
+  qr_token_rotated_at?: string | null
   active?: boolean
   sort_order?: number
   updated_at?: string
@@ -572,9 +754,13 @@ export type Task = {
   schedule_anchor_at: string
   assignee_id: string | null
   assignee_role: MembershipRole | null
+  assignee_team_id: string | null
+  rotation_enabled: boolean
+  rotation_cursor: number
   required_skills: string[]
   supplies_needed: string[]
   instructions: string | null
+  evidence_rule: string | null
   is_active: boolean
   is_one_off: boolean
   created_by: string
@@ -597,6 +783,9 @@ export type TaskInsert = {
   schedule_anchor_at?: string
   assignee_id?: string | null
   assignee_role?: MembershipRole | null
+  assignee_team_id?: string | null
+  rotation_enabled?: boolean
+  rotation_cursor?: number
   required_skills?: string[]
   supplies_needed?: string[]
   instructions?: string | null
@@ -620,6 +809,9 @@ export type TaskUpdate = {
   schedule_anchor_at?: string
   assignee_id?: string | null
   assignee_role?: MembershipRole | null
+  assignee_team_id?: string | null
+  rotation_enabled?: boolean
+  rotation_cursor?: number
   required_skills?: string[]
   supplies_needed?: string[]
   instructions?: string | null
@@ -670,10 +862,21 @@ export type TaskInstance = {
   completed_at: string | null
   skipped_at: string | null
   skip_reason: string | null
+  verification_status: TaskVerificationStatus
+  submitted_at: string | null
+  verified_by: string | null
+  verified_at: string | null
+  verification_note: string | null
+  rework_requested_by: string | null
+  rework_requested_at: string | null
+  rework_note: string | null
+  rework_of_instance_id: string | null
   created_at: string
   updated_at: string
   deleted_at: string | null
 }
+
+export type TaskVerificationStatus = 'not_required' | 'pending' | 'verified' | 'rework_requested'
 
 export type TaskStatus = 'pending' | 'in_progress' | 'completed' | 'skipped' | 'overdue'
 
@@ -689,6 +892,15 @@ export type TaskInstanceInsert = {
   completed_at?: string | null
   skipped_at?: string | null
   skip_reason?: string | null
+  verification_status?: TaskVerificationStatus
+  submitted_at?: string | null
+  verified_by?: string | null
+  verified_at?: string | null
+  verification_note?: string | null
+  rework_requested_by?: string | null
+  rework_requested_at?: string | null
+  rework_note?: string | null
+  rework_of_instance_id?: string | null
   created_at?: string
   updated_at?: string
   deleted_at?: string | null
@@ -703,6 +915,15 @@ export type TaskInstanceUpdate = {
   completed_at?: string | null
   skipped_at?: string | null
   skip_reason?: string | null
+  verification_status?: TaskVerificationStatus
+  submitted_at?: string | null
+  verified_by?: string | null
+  verified_at?: string | null
+  verification_note?: string | null
+  rework_requested_by?: string | null
+  rework_requested_at?: string | null
+  rework_note?: string | null
+  rework_of_instance_id?: string | null
   updated_at?: string
   deleted_at?: string | null
 }
@@ -745,6 +966,144 @@ export type TaskCompletionUpdate = {
   deleted_at?: string | null
 }
 
+/* Task Checklist Items */
+export type TaskChecklistItem = {
+  id: string
+  space_id: string
+  task_id: string
+  label: string
+  position: number
+  created_by: string
+  created_at: string
+  updated_at: string
+  deleted_at: string | null
+}
+
+export type TaskChecklistItemInsert = {
+  id?: string
+  space_id: string
+  task_id: string
+  label: string
+  position: number
+  created_by: string
+  created_at?: string
+  updated_at?: string
+  deleted_at?: string | null
+}
+
+export type TaskChecklistItemUpdate = {
+  label?: string
+  position?: number
+  updated_at?: string
+  deleted_at?: string | null
+}
+
+/* Task Checklist Results */
+export type TaskChecklistResult = {
+  id: string
+  space_id: string
+  task_instance_id: string
+  checklist_item_id: string
+  label_snapshot: string
+  status: ChecklistResultStatus
+  note: string | null
+  issue_id: string | null
+  actor_user_id: string
+  created_at: string
+  updated_at: string
+}
+
+export type ChecklistResultStatus = 'done' | 'not_applicable' | 'problem'
+
+export type TaskChecklistResultInsert = {
+  id?: string
+  space_id: string
+  task_instance_id: string
+  checklist_item_id: string
+  label_snapshot: string
+  status: ChecklistResultStatus
+  note?: string | null
+  issue_id?: string | null
+  actor_user_id: string
+  created_at?: string
+  updated_at?: string
+}
+
+export type TaskChecklistResultUpdate = {
+  label_snapshot?: string
+  status?: ChecklistResultStatus
+  note?: string | null
+  issue_id?: string | null
+  updated_at?: string
+}
+
+/* Shared Device Pins */
+export type SharedDevicePin = {
+  id: string
+  space_id: string
+  user_id: string
+  pin_hash: string
+  failed_attempts: number
+  locked_until: string | null
+  created_at: string
+  updated_at: string
+}
+
+export type SharedDevicePinInsert = {
+  id?: string
+  space_id: string
+  user_id: string
+  pin_hash: string
+  failed_attempts?: number
+  locked_until?: string | null
+  created_at?: string
+  updated_at?: string
+}
+
+export type SharedDevicePinUpdate = {
+  pin_hash?: string
+  failed_attempts?: number
+  locked_until?: string | null
+  updated_at?: string
+}
+
+/* Shared Device Sessions */
+export type SharedDeviceSession = {
+  id: string
+  space_id: string
+  user_id: string
+  token_hash: string
+  created_by: string
+  created_at: string
+  last_used_at: string | null
+  expires_at: string
+  revoked_at: string | null
+}
+
+export type SharedDeviceSessionInsert = {
+  id?: string
+  space_id: string
+  user_id: string
+  token_hash: string
+  created_by: string
+  created_at?: string
+  last_used_at?: string | null
+  expires_at: string
+  revoked_at?: string | null
+}
+
+export type SharedDeviceSessionUpdate = {
+  last_used_at?: string | null
+  revoked_at?: string | null
+}
+
+export type SharedDeviceMember = {
+  member_id: string
+  full_name: string
+  role: MembershipRole
+  has_pin: boolean
+}
+
 /* Issues */
 export type Issue = {
   id: string
@@ -776,6 +1135,8 @@ export type Issue = {
   reopened_at: string | null
   reopen_count: number
   follow_up_task_id: string | null
+  source_task_instance_id: string | null
+  source_checklist_item_id: string | null
   created_at: string
   updated_at: string
   deleted_at: string | null
@@ -1146,6 +1507,49 @@ export type NotificationPreferenceUpdate = {
   updated_at?: string
 }
 
+export type NotificationType =
+  | 'task_reminder'
+  | 'task_overdue'
+  | 'task_completed'
+  | 'issue_reported'
+  | 'issue_assigned'
+  | 'issue_resolved'
+  | 'supply_low'
+  | 'supply_requested'
+  | 'supply_fulfilled'
+  | 'recommendation_new'
+  | 'mention'
+  | 'daily_summary'
+  | 'weekly_summary'
+
+export type Notification = {
+  id: string
+  space_id: string
+  user_id: string
+  type: NotificationType
+  title: string
+  body: string
+  metadata: Json
+  read_at: string | null
+  created_at: string
+}
+
+export type NotificationInsert = {
+  id?: string
+  space_id: string
+  user_id: string
+  type: NotificationType
+  title: string
+  body?: string
+  metadata?: Json
+  read_at?: string | null
+  created_at?: string
+}
+
+export type NotificationUpdate = {
+  read_at?: string | null
+}
+
 /* Recommendations */
 export type Recommendation = {
   id: string
@@ -1298,6 +1702,7 @@ export type TeamMemberUpdate = {
 export type TaskAssignment = {
   id: string
   task_id: string
+  space_id: string
   user_id: string
   assigned_by: string
   assigned_at: string
@@ -1311,6 +1716,7 @@ export type TaskAssignment = {
 export type TaskAssignmentInsert = {
   id?: string
   task_id: string
+  space_id?: string
   user_id: string
   assigned_by: string
   assigned_at?: string
@@ -1481,4 +1887,18 @@ export type InvitationUpdate = {
   accepted_by?: string | null
   updated_at?: string
   deleted_at?: string | null
+}
+
+/* Helper Types for RPCs */
+export type QrAreaLookup = {
+  area_id: string
+  area_name: string
+  area_active: boolean
+  space_id: string
+  space_name: string
+  space_type: SpaceType
+  timezone: string
+  qr_enabled: boolean
+  shared_device_enabled: boolean
+  shared_device_session_minutes: number
 }

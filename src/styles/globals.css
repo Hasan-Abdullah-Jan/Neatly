@@ -1,4 +1,5 @@
 @import 'tailwindcss';
+@config '../../tailwind.config.ts';
 
 @theme inline {
   /* Fonts */
@@ -6,46 +7,46 @@
   --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
 
   /* Light theme (default) */
-  --color-background: #fafafa;
-  --color-surface: #ffffff;
-  --color-surface-elevated: #ffffff;
-  --color-surface-glass: rgba(255, 255, 255, 0.85);
-  --color-border: #e5e5e5;
-  --color-border-strong: #d4d4d4;
-  --color-text: #171717;
-  --color-text-muted: #737373;
-  --color-text-inverse: #fafafa;
+  --color-background: var(--neatly-background);
+  --color-surface: var(--neatly-surface);
+  --color-surface-elevated: var(--neatly-surface-elevated);
+  --color-surface-glass: var(--neatly-surface-glass);
+  --color-border: var(--neatly-border);
+  --color-border-strong: var(--neatly-border-strong);
+  --color-text: var(--neatly-text);
+  --color-text-muted: var(--neatly-text-muted);
+  --color-text-inverse: var(--neatly-text-inverse);
 
   /* Primary (teal/green) */
-  --color-primary: #14b8a6;
-  --color-primary-hover: #0d9488;
-  --color-primary-active: #0f766e;
-  --color-primary-light: #ccfbf1;
-  --color-primary-text: #134e4a;
+  --color-primary: var(--neatly-primary);
+  --color-primary-hover: var(--neatly-primary-hover);
+  --color-primary-active: var(--neatly-primary-active);
+  --color-primary-light: var(--neatly-primary-light);
+  --color-primary-text: var(--neatly-primary-text);
 
   /* Amber (needs attention) */
-  --color-amber: #f59e0b;
-  --color-amber-hover: #d97706;
-  --color-amber-light: #fef3c7;
-  --color-amber-text: #78350f;
+  --color-amber: var(--neatly-amber);
+  --color-amber-hover: var(--neatly-amber-hover);
+  --color-amber-light: var(--neatly-amber-light);
+  --color-amber-text: var(--neatly-amber-text);
 
   /* Destructive (red - ONLY for urgent/destructive) */
-  --color-destructive: #ef4444;
-  --color-destructive-hover: #dc2626;
-  --color-destructive-light: #fee2e2;
-  --color-destructive-text: #7f1d1d;
+  --color-destructive: var(--neatly-destructive);
+  --color-destructive-hover: var(--neatly-destructive-hover);
+  --color-destructive-light: var(--neatly-destructive-light);
+  --color-destructive-text: var(--neatly-destructive-text);
 
   /* Success */
-  --color-success: #16a34a;
-  --color-success-hover: #15803d;
-  --color-success-light: #dcfce7;
-  --color-success-text: #14532d;
+  --color-success: var(--neatly-success);
+  --color-success-hover: var(--neatly-success-hover);
+  --color-success-light: var(--neatly-success-light);
+  --color-success-text: var(--neatly-success-text);
 
   /* Info */
-  --color-info: #0ea5e9;
-  --color-info-hover: #0284c7;
-  --color-info-light: #e0f2fe;
-  --color-info-text: #075985;
+  --color-info: var(--neatly-info);
+  --color-info-hover: var(--neatly-info-hover);
+  --color-info-light: var(--neatly-info-light);
+  --color-info-text: var(--neatly-info-text);
 
   /* Spacing scale (8px grid) */
   --space-1: 0.25rem;  /* 4px */
@@ -68,9 +69,9 @@
   --radius-full: 9999px;
 
   /* Shadows */
-  --shadow-surface: 0 1px 3px 0 rgb(0 0 0 / 0.08), 0 1px 2px -1px rgb(0 0 0 / 0.08);
-  --shadow-elevated: 0 10px 15px -3px rgb(0 0 0 / 0.08), 0 4px 6px -4px rgb(0 0 0 / 0.08);
-  --shadow-glass: 0 8px 32px 0 rgb(0 0 0 / 0.12);
+  --shadow-surface: 0 1px 2px rgb(15 23 42 / 0.04), 0 8px 24px -16px rgb(15 23 42 / 0.22);
+  --shadow-elevated: 0 18px 46px -24px rgb(15 23 42 / 0.24), 0 3px 10px -7px rgb(15 23 42 / 0.18);
+  --shadow-glass: 0 18px 55px -24px rgb(15 23 42 / 0.24);
 
   /* Focus rings */
   --focus-ring: 0 0 0 3px rgb(20 184 166 / 0.4);
@@ -89,89 +90,107 @@
   --z-tooltip: 400;
 }
 
-/* Dark theme */
-@media (prefers-color-scheme: dark) {
-  :root:not(.light) {
-    --color-background: #0a0a0a;
-    --color-surface: #171717;
-    --color-surface-elevated: #262626;
-    --color-surface-glass: rgba(23, 23, 23, 0.85);
-    --color-border: #404040;
-    --color-border-strong: #525252;
-    --color-text: #fafafa;
-    --color-text-muted: #a3a3a3;
-    --color-text-inverse: #171717;
-
-    --color-primary-light: #134e4a;
-    --color-primary-text: #ccfbf1;
-
-    --color-amber-light: #451a03;
-    --color-amber-text: #fef3c7;
-
-    --color-destructive-light: #450a0a;
-    --color-destructive-text: #fee2e2;
-
-    --color-success-light: #14532d;
-    --color-success-text: #dcfce7;
-
-    --color-info-light: #075985;
-    --color-info-text: #e0f2fe;
-  }
+/* Semantic variables keep Tailwind color utilities in sync with the active theme. */
+:root {
+  --neatly-background: #f5f8f7;
+  --neatly-surface: #ffffff;
+  --neatly-surface-elevated: #ffffff;
+  --neatly-surface-glass: rgb(255 255 255 / 0.85);
+  --neatly-border: #e5e5e5;
+  --neatly-border-strong: #d4d4d4;
+  --neatly-text: #171717;
+  --neatly-text-muted: #737373;
+  --neatly-text-inverse: #fafafa;
+  --neatly-primary: #14b8a6;
+  --neatly-primary-hover: #0d9488;
+  --neatly-primary-active: #0f766e;
+  --neatly-primary-light: #ccfbf1;
+  --neatly-primary-text: #134e4a;
+  --neatly-amber: #f59e0b;
+  --neatly-amber-hover: #d97706;
+  --neatly-amber-light: #fef3c7;
+  --neatly-amber-text: #78350f;
+  --neatly-destructive: #ef4444;
+  --neatly-destructive-hover: #dc2626;
+  --neatly-destructive-light: #fee2e2;
+  --neatly-destructive-text: #7f1d1d;
+  --neatly-success: #16a34a;
+  --neatly-success-hover: #15803d;
+  --neatly-success-light: #dcfce7;
+  --neatly-success-text: #14532d;
+  --neatly-info: #0ea5e9;
+  --neatly-info-hover: #0284c7;
+  --neatly-info-light: #e0f2fe;
+  --neatly-info-text: #075985;
 }
 
 /* Explicit light/dark classes for manual toggle */
 .light {
-  --color-background: #fafafa;
-  --color-surface: #ffffff;
-  --color-surface-elevated: #ffffff;
-  --color-surface-glass: rgba(255, 255, 255, 0.85);
-  --color-border: #e5e5e5;
-  --color-border-strong: #d4d4d4;
-  --color-text: #171717;
-  --color-text-muted: #737373;
-  --color-text-inverse: #fafafa;
-
-  --color-primary-light: #ccfbf1;
-  --color-primary-text: #134e4a;
-
-  --color-amber-light: #fef3c7;
-  --color-amber-text: #78350f;
-
-  --color-destructive-light: #fee2e2;
-  --color-destructive-text: #7f1d1d;
-
-  --color-success-light: #dcfce7;
-  --color-success-text: #14532d;
-
-  --color-info-light: #e0f2fe;
-  --color-info-text: #075985;
+  --neatly-background: #fafafa;
+  --neatly-surface: #ffffff;
+  --neatly-surface-elevated: #ffffff;
+  --neatly-surface-glass: rgb(255 255 255 / 0.85);
+  --neatly-border: #e5e5e5;
+  --neatly-border-strong: #d4d4d4;
+  --neatly-text: #171717;
+  --neatly-text-muted: #737373;
+  --neatly-text-inverse: #fafafa;
+  --neatly-primary-light: #ccfbf1;
+  --neatly-primary-text: #134e4a;
+  --neatly-amber-light: #fef3c7;
+  --neatly-amber-text: #78350f;
+  --neatly-destructive-light: #fee2e2;
+  --neatly-destructive-text: #7f1d1d;
+  --neatly-success-light: #dcfce7;
+  --neatly-success-text: #14532d;
+  --neatly-info-light: #e0f2fe;
+  --neatly-info-text: #075985;
 }
 
 .dark {
-  --color-background: #0a0a0a;
-  --color-surface: #171717;
-  --color-surface-elevated: #262626;
-  --color-surface-glass: rgba(23, 23, 23, 0.85);
-  --color-border: #404040;
-  --color-border-strong: #525252;
-  --color-text: #fafafa;
-  --color-text-muted: #a3a3a3;
-  --color-text-inverse: #171717;
+  --neatly-background: #0a0a0a;
+  --neatly-surface: #171717;
+  --neatly-surface-elevated: #262626;
+  --neatly-surface-glass: rgb(23 23 23 / 0.85);
+  --neatly-border: #404040;
+  --neatly-border-strong: #525252;
+  --neatly-text: #fafafa;
+  --neatly-text-muted: #a3a3a3;
+  --neatly-text-inverse: #171717;
+  --neatly-primary-light: #134e4a;
+  --neatly-primary-text: #ccfbf1;
+  --neatly-amber-light: #451a03;
+  --neatly-amber-text: #fef3c7;
+  --neatly-destructive-light: #450a0a;
+  --neatly-destructive-text: #fee2e2;
+  --neatly-success-light: #14532d;
+  --neatly-success-text: #dcfce7;
+  --neatly-info-light: #075985;
+  --neatly-info-text: #e0f2fe;
+}
 
-  --color-primary-light: #134e4a;
-  --color-primary-text: #ccfbf1;
-
-  --color-amber-light: #451a03;
-  --color-amber-text: #fef3c7;
-
-  --color-destructive-light: #450a0a;
-  --color-destructive-text: #fee2e2;
-
-  --color-success-light: #14532d;
-  --color-success-text: #dcfce7;
-
-  --color-info-light: #075985;
-  --color-info-text: #e0f2fe;
+@media (prefers-color-scheme: dark) {
+  :root:not(.light) {
+    --neatly-background: #0a0a0a;
+    --neatly-surface: #171717;
+    --neatly-surface-elevated: #262626;
+    --neatly-surface-glass: rgb(23 23 23 / 0.85);
+    --neatly-border: #404040;
+    --neatly-border-strong: #525252;
+    --neatly-text: #fafafa;
+    --neatly-text-muted: #a3a3a3;
+    --neatly-text-inverse: #171717;
+    --neatly-primary-light: #134e4a;
+    --neatly-primary-text: #ccfbf1;
+    --neatly-amber-light: #451a03;
+    --neatly-amber-text: #fef3c7;
+    --neatly-destructive-light: #450a0a;
+    --neatly-destructive-text: #fee2e2;
+    --neatly-success-light: #14532d;
+    --neatly-success-text: #dcfce7;
+    --neatly-info-light: #075985;
+    --neatly-info-text: #e0f2fe;
+  }
 }
 
 /* Base styles */
@@ -190,6 +209,10 @@ body {
   margin: 0;
   min-height: 100vh;
   background-color: var(--color-background);
+  background-image:
+    radial-gradient(70rem 44rem at -8% -12%, rgb(20 184 166 / 0.11), transparent 62%),
+    radial-gradient(58rem 38rem at 108% 4%, rgb(56 189 248 / 0.08), transparent 62%),
+    linear-gradient(180deg, rgb(255 255 255 / 0.34), transparent 38rem);
   color: var(--color-text);
   font-family: var(--font-sans);
   font-size: 1rem;
@@ -211,10 +234,8 @@ body {
 
 /* Focus visible for keyboard navigation */
 :focus-visible {
-  outline: none;
-  ring: 2px solid var(--color-primary);
-  ring-offset: 2px;
-  ring-offset-color: var(--color-background);
+  outline: 2px solid var(--color-primary-active);
+  outline-offset: 3px;
 }
 
 /* Logical properties for RTL support */
@@ -249,17 +270,91 @@ body {
 
 /* Utility classes for glass panels (ONLY for nav bars and overlays) */
 .glass-panel {
-  background-color: var(--color-surface-glass);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid var(--color-border);
+  background-color: color-mix(in srgb, var(--color-surface) 82%, transparent);
+  backdrop-filter: blur(20px) saturate(150%);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
+  border: 1px solid color-mix(in srgb, var(--color-border) 72%, white);
+  box-shadow: 0 8px 28px -20px rgb(15 23 42 / 0.38);
 }
 
 .glass-panel-sm {
-  background-color: var(--color-surface-glass);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border: 1px solid var(--color-border);
+  background-color: color-mix(in srgb, var(--color-surface) 88%, transparent);
+  backdrop-filter: blur(12px) saturate(140%);
+  -webkit-backdrop-filter: blur(12px) saturate(140%);
+  border: 1px solid color-mix(in srgb, var(--color-border) 74%, white);
+}
+
+.glass-sidebar {
+  background-color: color-mix(in srgb, var(--color-surface) 84%, transparent);
+  backdrop-filter: blur(24px) saturate(145%);
+  -webkit-backdrop-filter: blur(24px) saturate(145%);
+  box-shadow: 14px 0 42px -34px rgb(15 23 42 / 0.38);
+}
+
+.glass-card {
+  background: linear-gradient(145deg, rgb(255 255 255 / 0.88), rgb(255 255 255 / 0.68));
+  backdrop-filter: blur(24px) saturate(135%);
+  -webkit-backdrop-filter: blur(24px) saturate(135%);
+  box-shadow: var(--shadow-glass);
+}
+
+.startup-canvas {
+  background:
+    radial-gradient(ellipse at 16% 14%, rgb(45 212 191 / 0.20), transparent 48%),
+    radial-gradient(ellipse at 84% 18%, rgb(125 211 252 / 0.20), transparent 44%),
+    linear-gradient(145deg, #f0fdfa 0%, #f8fafc 52%, #eff6ff 100%);
+}
+
+.demo-canvas {
+  min-height: 100vh;
+  background:
+    radial-gradient(65rem 42rem at 4% 0%, rgb(20 184 166 / 0.10), transparent 65%),
+    radial-gradient(55rem 36rem at 100% 10%, rgb(56 189 248 / 0.08), transparent 65%),
+    var(--color-background);
+}
+
+.app-layout {
+  isolation: isolate;
+}
+
+.app-main > .p-4 {
+  animation: page-enter 380ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+@keyframes page-enter {
+  from {
+    opacity: 0.55;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-main > .p-4 {
+    animation: none;
+  }
+}
+
+@media (max-width: 767px) {
+  .glass-sidebar {
+    background-color: color-mix(in srgb, var(--color-surface) 92%, transparent);
+  }
+
+  .dark .glass-card,
+  :root:not(.light) .glass-card {
+    background: linear-gradient(145deg, rgb(23 23 23 / 0.92), rgb(23 23 23 / 0.78));
+  }
+
+  .dark .startup-canvas,
+  :root:not(.light) .startup-canvas {
+    background:
+      radial-gradient(ellipse at 16% 14%, rgb(20 184 166 / 0.18), transparent 48%),
+      radial-gradient(ellipse at 84% 18%, rgb(14 116 144 / 0.18), transparent 44%),
+      linear-gradient(145deg, #0a1715 0%, #111827 52%, #0f172a 100%);
+  }
 }
 
 /* Touch targets minimum 44x44 */

@@ -23,6 +23,7 @@ A universal space-care web app (PWA) that works equally for one person in an apa
 - **Dates**: date-fns + date-fns-tz
 - **Backend**: Supabase (Postgres, Auth, Row Level Security, private Storage for issue photos)
 - **PWA**: vite-plugin-pwa
+- **Demo**: standalone local sandbox at `/demo`; does not require authentication or a Supabase connection
 - **QR Codes**: qrcode.react (placeholder UI only)
 - **Testing**: Vitest + Playwright
 - **UI**: Custom component library with Radix-style patterns
@@ -49,7 +50,7 @@ cp .env.example .env.local
 npm run dev
 ```
 
-The app refuses to boot without `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`. There is no demo database, so onboarding activation, task generation, issue reporting, photo upload, and RLS behavior require a configured Supabase project with the migrations applied.
+The authenticated app requires `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`. The standalone guided demo is available at `/demo` without signing in or connecting to Supabase. Demo records are isolated to the current browser tab's session storage; they never write to Supabase and can be cleared with **Reset demo** or by closing the tab. The demo is illustrative only: simulated QR scanning, task verification, issue handling, dashboards, and recommendations do not exercise live database, RLS, or Storage behavior. The public `/privacy` page also loads without Supabase configuration.
 
 ### Environment Variables
 
@@ -100,8 +101,27 @@ Migrations are in `supabase/migrations/`:
 6. `010_level3_task_engine.sql` - Due times, schedule anchors, dependencies, unassigned-work policies, and task RPCs
 7. `011_level4_issue_status.sql` - Adds the `reopened` issue status in its own transaction
 8. `012_level4_issues.sql` - Issue categories, assignment, lifecycle RPCs, patterns, and private issue-photo storage
+9. `013_level5_qr_evidence.sql` - Area QR tokens, task evidence, checklists, and supervisor verification
+10. `014_level6_supplies.sql` - Supply workflow RPCs
+11. `015_level7_shared_spaces_rpc.sql` - Shared-space team, invitation, away-period, and swap RPCs
+12. `016_level7_rotation.sql` - Role/team task assignment, away-aware round-robin rotation, guarded invitation/swap operations, and assignment RLS checks
+13. `017_shared_device_pin_lockout.sql` - Persist failed shared-device PIN attempts and lockouts
+14. `018_privacy_account_lifecycle.sql` - Self-service export, audit events, and account deletion preparation
+15. `019_in_app_notifications.sql` - Recipient-scoped notification inbox and read state
+16. `020_harden_supply_mutations.sql` - Manager-only supply mutations and approved-request fulfillment
 
-Apply them in filename order. The Level 4 RPCs and Storage policies assume the helper functions and tables from the earlier migrations exist.
+Apply them in filename order. The RPCs and Storage policies assume the helper functions and tables from earlier migrations exist. Migration `016` has not been applied to a live Supabase project in this workspace; verify it against a staging database before deployment.
+
+## Release and privacy docs
+
+- [Deployment and environment setup](docs/DEPLOYMENT.md)
+- [Architecture](docs/architecture.md) and [ER diagram](docs/ER-DIAGRAM.md)
+- [Role matrix](docs/ROLE-MATRIX.md)
+- [User guide](docs/USER-GUIDE.md) and [cleaner quick start](docs/CLEANER-QUICK-START.md)
+- [What works / what is not built](docs/WHAT-WORKS.md)
+- [Final QA checklist](docs/QA-CHECKLIST.md)
+
+The Netlify host configuration includes SPA routing and CSP/security headers. If deploying elsewhere, port those headers and validate the policy for the configured Supabase host. Account deletion requires deploying the `delete-account` Supabase Edge Function with server-only secrets; the client app must never receive `SUPABASE_SERVICE_ROLE_KEY`.
 
 ### Key Tables
 
@@ -121,6 +141,9 @@ Apply them in filename order. The Level 4 RPCs and Storage policies assume the h
 - **supply_requests** - Restock requests
 - **teams** - Groups within spaces
 - **task_assignments** - Explicit/rotation assignments
+- **task_comments** - Shared discussion on task instances
+- **task_swaps** - Swap and unable-to-complete requests with response history
+- **member_away** - Member pause periods; excluded from rotation while active
 - **task_comments** - Comments on task instances
 - **task_swaps** - Swap requests between members
 - **member_away** - Pause mode for illness/travel

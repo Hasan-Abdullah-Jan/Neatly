@@ -78,8 +78,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           />
           {rightIcon && (
             <div
-              className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-text-muted"
-              aria-hidden="true"
+              className="absolute inset-y-0 right-0 flex items-center pr-3 text-text-muted"
             >
               {rightIcon}
             </div>

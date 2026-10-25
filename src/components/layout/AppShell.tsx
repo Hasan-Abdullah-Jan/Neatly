@@ -1,9 +1,10 @@
-import { Fragment, useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { Outlet, useLocation, NavLink, useNavigate } from 'react-router-dom'
 import { cn } from '@lib/utils'
 import { Button } from '@components/ui/Button'
 import { SpaceSelector } from '@features/spaces/components/SpaceSelector'
 import { useAuth } from '@contexts/AuthContext'
+import { getUnreadNotificationCount } from '@features/notifications/api/notifications'
 import {
   Home,
   LayoutGrid,
@@ -11,11 +12,9 @@ import {
   Package,
   History,
   Settings,
-  BarChart,
   FolderOpen,
   ClipboardList,
   AlertTriangle,
-  FileText,
   Menu,
   X,
   ChevronDown,
@@ -24,6 +23,11 @@ import {
   Monitor,
   LogOut,
   User,
+  Users,
+  CalendarDays,
+  Scale,
+  Bell,
+  Lightbulb,
 } from 'lucide-react'
 
 type NavItem = {
@@ -40,18 +44,23 @@ const personalNavItems: NavItem[] = [
   { path: '/tasks', label: 'Tasks', icon: <CheckSquare className="w-6 h-6" />, modes: ['personal'] },
   { path: '/supplies', label: 'Supplies', icon: <Package className="w-6 h-6" />, modes: ['personal'] },
   { path: '/history', label: 'History', icon: <History className="w-6 h-6" />, modes: ['personal'] },
+  { path: '/insights', label: 'Suggestions', icon: <Lightbulb className="w-6 h-6" />, modes: ['personal'] },
   { path: '/issues', label: 'Issues', icon: <AlertTriangle className="w-6 h-6" />, modes: ['personal'] },
   { path: '/space-settings', label: 'Space settings', icon: <Settings className="w-6 h-6" />, modes: ['personal'] },
 ]
 
 const organizationNavItems: NavItem[] = [
-  { path: '/organization', label: 'Overview', icon: <BarChart className="w-6 h-6" />, modes: ['organization'] },
+  { path: '/today', label: 'Today', icon: <Home className="w-6 h-6" />, modes: ['organization'] },
   { path: '/areas', label: 'Areas', icon: <FolderOpen className="w-6 h-6" />, modes: ['organization'] },
   { path: '/tasks', label: 'Tasks & schedules', icon: <ClipboardList className="w-6 h-6" />, modes: ['organization'] },
   { path: '/history', label: 'History', icon: <History className="w-6 h-6" />, modes: ['organization'] },
-  { path: '/supplies-requests', label: 'Supplies & Requests', icon: <Package className="w-6 h-6" />, modes: ['organization'] },
+  { path: '/supplies', label: 'Supplies & Requests', icon: <Package className="w-6 h-6" />, modes: ['organization'] },
   { path: '/issues', label: 'Issues', icon: <AlertTriangle className="w-6 h-6" />, modes: ['organization'] },
-  { path: '/reports', label: 'Reports', icon: <FileText className="w-6 h-6" />, modes: ['organization'] },
+  { path: '/teams', label: 'Teams', icon: <Users className="w-6 h-6" />, modes: ['organization'] },
+  { path: '/invitations', label: 'Invitations', icon: <User className="w-6 h-6" />, modes: ['organization'] },
+  { path: '/away', label: 'Away periods', icon: <CalendarDays className="w-6 h-6" />, modes: ['organization'] },
+  { path: '/workload', label: 'Weekly workload', icon: <Scale className="w-6 h-6" />, modes: ['organization'] },
+  { path: '/insights', label: 'Insights & suggestions', icon: <Lightbulb className="w-6 h-6" />, modes: ['organization'] },
   { path: '/space-settings', label: 'Settings', icon: <Settings className="w-6 h-6" />, modes: ['organization'] },
 ]
 
@@ -61,16 +70,52 @@ export function AppShell() {
   const navigate = useNavigate()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
-  const [isMobile, setIsMobile] = useState(false)
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  void navigate
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768)
+  const [unreadNotifications, setUnreadNotifications] = useState(0)
+  const [notificationError, setNotificationError] = useState(false)
+  const currentSpaceId = currentSpace?.id
+  const theme = profile?.theme ?? 'system'
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768)
-    checkMobile()
     window.addEventListener('resize', checkMobile)
     return () => window.removeEventListener('resize', checkMobile)
   }, [])
+
+  useEffect(() => {
+    const root = document.documentElement
+    const systemTheme = window.matchMedia('(prefers-color-scheme: dark)')
+    const applyTheme = () => {
+      root.classList.remove('light', 'dark')
+      root.classList.add(theme === 'system' ? (systemTheme.matches ? 'dark' : 'light') : theme)
+    }
+
+    applyTheme()
+    if (theme !== 'system') return
+
+    systemTheme.addEventListener('change', applyTheme)
+    return () => systemTheme.removeEventListener('change', applyTheme)
+  }, [theme])
+
+  useEffect(() => {
+    let active = true
+    if (!currentSpaceId) return
+
+    getUnreadNotificationCount(currentSpaceId)
+      .then((count) => {
+        if (active) {
+          setUnreadNotifications(count)
+          setNotificationError(false)
+        }
+      })
+      .catch(() => {
+        if (active) setNotificationError(true)
+      })
+
+    return () => {
+      active = false
+    }
+  }, [currentSpaceId, location.pathname])
 
   const spaceType = currentSpace?.type || 'personal'
   const navItems = spaceType === 'personal' ? personalNavItems : organizationNavItems
@@ -82,12 +127,6 @@ export function AppShell() {
 
   const handleThemeChange = async (theme: 'light' | 'dark' | 'system') => {
     await updateProfile({ theme })
-    if (theme === 'system') {
-      document.documentElement.classList.remove('light', 'dark')
-    } else {
-      document.documentElement.classList.remove('light', 'dark')
-      document.documentElement.classList.add(theme)
-    }
   }
 
   // Close sidebar on navigation (mobile)
@@ -96,7 +135,7 @@ export function AppShell() {
   }, [location.pathname, isMobile])
 
   return (
-    <Fragment>
+    <div className="app-layout min-h-screen">
       {/* Mobile sidebar overlay */}
       {isMobile && sidebarOpen && (
         <div
@@ -109,7 +148,7 @@ export function AppShell() {
       {/* Sidebar / Side rail */}
       <aside
         className={cn(
-          'fixed lg:static inset-y-0 left-0 z-50 w-64 bg-surface border-r border-border',
+          'glass-sidebar fixed inset-y-0 left-0 z-50 w-64 border-r border-border',
           'transform transition-transform duration-300 ease-in-out lg:translate-x-0',
           sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
           'flex flex-col'
@@ -252,7 +291,7 @@ export function AppShell() {
 
       {/* Main content */}
       <main className={cn(
-        'min-h-screen bg-background transition-all duration-300',
+      'app-main min-h-screen bg-transparent transition-all duration-300',
         'lg:ml-64',
         isMobile && 'pb-20'
       )}>
@@ -261,20 +300,54 @@ export function AppShell() {
           <header className="sticky top-0 z-30 glass-panel border-b border-border px-4 py-2 lg:hidden">
             <div className="flex items-center justify-between">
               <h1 className="text-heading-sm font-semibold text-text">Neatly</h1>
-              <SpaceSelector compact />
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="relative"
+                  onClick={() => navigate('/notifications')}
+                  aria-label={notificationError ? 'Notifications unavailable' : `Notifications${unreadNotifications ? `, ${unreadNotifications} unread` : ''}`}
+                  title={notificationError ? 'Notifications could not be loaded' : 'Notifications'}
+                >
+                  <Bell className="w-5 h-5" aria-hidden="true" />
+                  {unreadNotifications > 0 && (
+                    <span className="absolute -right-1 -top-1 min-w-5 rounded-full bg-destructive-text px-1 text-[10px] leading-5 text-white">
+                      {unreadNotifications > 99 ? '99+' : unreadNotifications}
+                    </span>
+                  )}
+                </Button>
+                {notificationError && <span role="status" className="text-xs text-destructive-text">Notifications unavailable</span>}
+                <SpaceSelector compact />
+              </div>
             </div>
           </header>
         )}
 
         {/* Desktop top bar with space selector */}
         {!isMobile && (
-          <header className="sticky top-0 z-30 glass-panel border-b border-border px-6 py-3 lg:ml-64">
+          <header className="sticky top-0 z-30 glass-panel border-b border-border px-6 py-3">
             <div className="flex items-center justify-between max-w-7xl mx-auto">
               <div className="flex items-center gap-4">
                 <h1 className="text-heading-md font-semibold text-text">Neatly</h1>
                 <SpaceSelector />
               </div>
               <div className="flex items-center gap-2">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="relative"
+                  onClick={() => navigate('/notifications')}
+                  aria-label={notificationError ? 'Notifications unavailable' : `Notifications${unreadNotifications ? `, ${unreadNotifications} unread` : ''}`}
+                  title={notificationError ? 'Notifications could not be loaded' : 'Notifications'}
+                >
+                  <Bell className="w-5 h-5" aria-hidden="true" />
+                  {unreadNotifications > 0 && (
+                    <span className="absolute -right-1 -top-1 min-w-5 rounded-full bg-destructive-text px-1 text-[10px] leading-5 text-white">
+                      {unreadNotifications > 99 ? '99+' : unreadNotifications}
+                    </span>
+                  )}
+                </Button>
+                {notificationError && <span role="status" className="text-xs text-destructive-text">Notifications unavailable</span>}
                 <Button variant="ghost" size="icon" onClick={handleSignOut} aria-label="Sign out">
                   <LogOut className="w-5 h-5" />
                 </Button>
@@ -330,6 +403,6 @@ export function AppShell() {
           </div>
         </nav>
       )}
-    </Fragment>
+    </div>
   )
 }
